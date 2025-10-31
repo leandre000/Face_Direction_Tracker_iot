@@ -36,14 +36,15 @@ MOTOR_ANGLE = 90            # Rotation angle for stepper motor
 # -----------------------------------------------------------------------------
 # Arduino Serial Setup
 # -----------------------------------------------------------------------------
+arduino = None
 try:
     arduino = serial.Serial(port=SERIAL_PORT, baudrate=BAUD_RATE, timeout=1)
     time.sleep(2)  # Wait for Arduino initialization
     print("[INFO] Connected to Arduino ✓")
 except serial.SerialException as e:
-    print(f"[ERROR] Failed to connect to Arduino on {SERIAL_PORT}: {e}")
-    print("Please check your connection and port number.")
-    exit(1)
+    print(f"[WARNING] Arduino not connected ({SERIAL_PORT}): {e}")
+    print("[INFO] Running in visualization-only mode (no motor control)")
+    print("Connect Arduino and restart to enable motor control")
 # -----------------------------------------------------------------------------
 # OpenCV Setup
 # -----------------------------------------------------------------------------
@@ -117,14 +118,16 @@ while True:
             if abs(dx) > MOVEMENT_THRESHOLD:
                 if dx > 0:
                     direction = "RIGHT"
-                    # Send command to rotate motor right
-                    arduino.write(f'rotate {MOTOR_ANGLE}\n'.encode())
-                    print(f"[CMD] Sent → rotate {MOTOR_ANGLE} (RIGHT)")
+                    if arduino:
+                        # Send command to rotate motor right
+                        arduino.write(f'rotate {MOTOR_ANGLE}\n'.encode())
+                        print(f"[CMD] Sent → rotate {MOTOR_ANGLE} (RIGHT)")
                 else:
                     direction = "LEFT"
-                    # Send command to rotate motor left
-                    arduino.write(f'rotate -{MOTOR_ANGLE}\n'.encode())
-                    print(f"[CMD] Sent → rotate -{MOTOR_ANGLE} (LEFT)")
+                    if arduino:
+                        # Send command to rotate motor left
+                        arduino.write(f'rotate -{MOTOR_ANGLE}\n'.encode())
+                        print(f"[CMD] Sent → rotate -{MOTOR_ANGLE} (LEFT)")
             else:
                 direction = "CENTER"  # Face is relatively still
         # Update tracking variables
@@ -154,6 +157,7 @@ while True:
 # -----------------------------------------------------------------------------
 print("[INFO] Cleaning up resources...")
 cap.release()
-arduino.close()
+if arduino:
+    arduino.close()
 cv2.destroyAllWindows()
 print("[INFO] Application terminated successfully")
