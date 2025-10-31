@@ -26,7 +26,7 @@ import serial
 # -----------------------------------------------------------------------------
 # Configuration Constants
 # -----------------------------------------------------------------------------
-SERIAL_PORT = 'COM11'          # Arduino serial port (change as needed)
+SERIAL_PORT = 'COM3'           # Arduino serial port (change as needed)
 BAUD_RATE = 9600              # Serial communication speed
 MOVEMENT_THRESHOLD = 8        # Minimum pixel movement to trigger direction change
 SCALE_FACTOR = 1.3           # Face detection scaling
