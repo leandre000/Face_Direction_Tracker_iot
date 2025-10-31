@@ -34,10 +34,10 @@ while True:
         if prev_center:
             dx = cx - prev_center[0]
             dy = cy - prev_center[1]
+            # Only consider horizontal movement for direction. If horizontal
+            # displacement dominates, report Left/Right; otherwise report Center.
             if abs(dx) > abs(dy):
                 direction = "Right" if dx > 0 else "Left"
-            elif abs(dy) > abs(dx):
-                direction = "Down" if dy > 0 else "Up"
             else:
                 direction = "Center"
 
