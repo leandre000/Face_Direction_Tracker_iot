@@ -2,7 +2,7 @@ import cv2
 import time
 
 # Face Direction & Speed Tracker
-# Author: Shema Leandre
+# Author: Izere Shema Leandre
 
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 cap = cv2.VideoCapture(0)
