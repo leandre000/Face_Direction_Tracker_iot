@@ -34,15 +34,30 @@ while True:
         if prev_center:
             dx = cx - prev_center[0]
             dy = cy - prev_center[1]
-            # Only consider horizontal movement for direction. If horizontal
-            # displacement dominates, report Left/Right; otherwise report Center.
-            if abs(dx) > abs(dy):
-                direction = "Right" if dx > 0 else "Left"
-            else:
-                direction = "Center"
 
+            # Distance & speed between positions
             distance = (dx**2 + dy**2)**0.5
             speed = distance / dt
+
+            # Thresholds
+            # movement_threshold: ignore tiny movements as noise (pixels)
+            # center_ratio: fraction of frame width considered as 'center' zone
+            movement_threshold = 5.0
+            center_ratio = 0.10
+
+            # If there is clear horizontal movement (and it dominates), use that
+            if abs(dx) > abs(dy) and abs(dx) > movement_threshold:
+                direction = "Right" if dx > 0 else "Left"
+            else:
+                # Face is relatively still or vertical movement dominates: decide
+                # direction based on absolute horizontal position within the frame.
+                frame_center_x = frame.shape[1] // 2
+                center_threshold = frame.shape[1] * center_ratio
+                pos_dx = cx - frame_center_x
+                if abs(pos_dx) > center_threshold:
+                    direction = "Right" if pos_dx > 0 else "Left"
+                else:
+                    direction = "Center"
 
         prev_center = (cx, cy)
         prev_time = current_time
