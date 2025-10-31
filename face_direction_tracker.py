@@ -1,75 +1,53 @@
 import cv2
+import serial
 import time
 
-# Face Direction & Speed Tracker
-# Author: Izere Shema Leandre
+# Connect to Arduino (adjust COM port if needed)
+arduino = serial.Serial('COM7', 9600, timeout=1)
+time.sleep(2)  # Wait for connection to stabilize
 
-face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+# Load Haar cascade face detector
+face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+# Start webcam
 cap = cv2.VideoCapture(0)
-
-prev_center = None
-prev_time = time.time()
-direction = "Center"
-speed = 0
-
-print("[INFO] Starting Face Direction Tracker...")
+frame_center_x = cap.get(3) // 2  # Horizontal center of frame
 
 while True:
     ret, frame = cap.read()
     if not ret:
-        print("[ERROR] Camera not accessible.")
         break
 
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=5)
+
+    direction = "No face detected"
 
     for (x, y, w, h) in faces:
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        cx, cy = x + w // 2, y + h // 2
-        cv2.circle(frame, (cx, cy), 4, (255, 0, 0), -1)
+        face_center_x = x + w // 2
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
-        current_time = time.time()
-        dt = current_time - prev_time if prev_time else 0.0001
+        # Determine direction and send command
+        if face_center_x < frame_center_x - 50:
+            arduino.write(b'R\n')
+            direction = "Right"
+        elif face_center_x > frame_center_x + 50:
+            arduino.write(b'L\n')
+            direction = "Left"
+        else:
+            arduino.write(b'S\n')
+            direction = "Centered"
 
-        if prev_center:
-            dx = cx - prev_center[0]
-            dy = cy - prev_center[1]
+        break  # Only track the first face
 
-            # Distance & speed between positions
-            distance = (dx**2 + dy**2)**0.5
-            speed = distance / dt
+    # Display direction on screen
+    cv2.putText(frame, f"Direction: {direction}", (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
-            # Thresholds
-            # movement_threshold: ignore tiny movements as noise (pixels)
-            # center_ratio: fraction of frame width considered as 'center' zone
-            movement_threshold = 5.0
-            center_ratio = 0.10
-
-            # If there is clear horizontal movement (and it dominates), use that
-            if abs(dx) > abs(dy) and abs(dx) > movement_threshold:
-                direction = "Right" if dx > 0 else "Left"
-            else:
-                # Face is relatively still or vertical movement dominates: decide
-                # direction based on absolute horizontal position within the frame.
-                frame_center_x = frame.shape[1] // 2
-                center_threshold = frame.shape[1] * center_ratio
-                pos_dx = cx - frame_center_x
-                if abs(pos_dx) > center_threshold:
-                    direction = "Right" if pos_dx > 0 else "Left"
-                else:
-                    direction = "Center"
-
-        prev_center = (cx, cy)
-        prev_time = current_time
-
-        cv2.putText(frame, f"Dir: {direction}", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-        cv2.putText(frame, f"Speed: {speed:.2f}px/s", (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
-
-    cv2.imshow("Face Direction Tracker", frame)
-
+    cv2.imshow('Face Tracker', frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
-        print("[INFO] Exiting...")
         break
 
 cap.release()
+arduino.close()
 cv2.destroyAllWindows()
